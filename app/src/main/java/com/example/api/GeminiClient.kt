@@ -158,7 +158,7 @@ object GeminiClient {
             - Needs Improvement/Kurang Jelas (score 0)
             
             Also calculate an overall score (0-100), clarity score (0-100), intonation score (0-100), and fluency score (0-100).
-            Provide friendly and specific feedback in Indonesian pointing out any sounds that were mispronounced or advice to improve.
+            Provide friendly and specific feedback in Indonesian pointing out any sounds that were mispronounced or advice to improve (e.g., 'Pengucapan に di tengah kalimat kurang jelas. Coba perlambat tempo bicara Anda...').
             
             You must return ONLY a raw JSON response conforming to this JSON schema:
             {
@@ -166,10 +166,15 @@ object GeminiClient {
               "clarityScore": 82,
               "intonationScore": 74,
               "fluencyScore": 80,
-              "feedback": "Pengucapan 'ni' di tengah kalimat kurang jelas. Coba perlambat tempo bicara Anda pada bagian tersebut.",
+              "feedback": "Pengucapan 'に' di tengah kalimat kurang jelas. Coba perlambat tempo bicara Anda pada bagian tersebut.",
               "wordEvaluations": [
-                {"word": "watashi", "score": 2},
-                {"word": "wa", "score": 2}
+                {"word": "私", "score": 2},
+                {"word": "は", "score": 2},
+                {"word": "毎日", "score": 1},
+                {"word": "日本語", "score": 2},
+                {"word": "を", "score": 0},
+                {"word": "勉強", "score": 2},
+                {"word": "します", "score": 2}
               ]
             }
         """.trimIndent()
@@ -225,7 +230,7 @@ object GeminiClient {
             clarityScore = 82,
             intonationScore = 74,
             fluencyScore = 80,
-            feedback = "Pengucapan 'ni' di tengah kalimat kurang jelas. Coba perlambat tempo bicara Anda pada bagian tersebut.",
+            feedback = "Pengucapan 'に' di tengah kalimat kurang jelas. Coba perlambat tempo bicara Anda pada bagian tersebut.",
             wordEvaluations = wordEvaluations
         )
     }

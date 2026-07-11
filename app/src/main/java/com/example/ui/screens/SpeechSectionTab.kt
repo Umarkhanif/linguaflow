@@ -35,18 +35,10 @@ fun SpeechSectionTab(
     val showSubNav = currentScreen in listOf(
         "quiz_selection", "speech_history", "profile", "statistics", "settings"
     )
-
     Scaffold(
-        bottomBar = {
-            if (showSubNav) {
-                BottomNavigationBar(
-                    currentScreen = currentScreen,
-                    onNavigate = { screen -> currentScreen = screen }
-                )
-            }
-        },
         containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    )
+   { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()

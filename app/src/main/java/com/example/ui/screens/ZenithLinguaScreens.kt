@@ -1161,6 +1161,8 @@ fun SpeechHistoryScreen(
                             .fillMaxWidth()
                             .height(150.dp)
                     ) {
+                        val chartPrimary = MaterialTheme.colorScheme.primary
+                        val chartPrimaryContainer = MaterialTheme.colorScheme.primaryContainer
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val w = size.width
                             val h = size.height
@@ -1184,7 +1186,7 @@ fun SpeechHistoryScreen(
                             // Draw trend line
                             for (i in 0 until points.size - 1) {
                                 drawLine(
-                                    color = PrimaryContainer,
+                                    color = chartPrimaryContainer,
                                     start = points[i],
                                     end = points[i + 1],
                                     strokeWidth = 8f,
@@ -1194,7 +1196,7 @@ fun SpeechHistoryScreen(
 
                             // Draw data points
                             points.forEach { pt ->
-                                drawCircle(color = Primary, radius = 10f, center = pt)
+                                drawCircle(color = chartPrimary, radius = 10f, center = pt)
                                 drawCircle(color = Color.White, radius = 5f, center = pt)
                             }
                         }
@@ -2226,6 +2228,8 @@ fun StatisticsScreen(
                         modifier = Modifier.size(160.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        val donutPrimary = MaterialTheme.colorScheme.primary
+                        val donutPrimaryContainer = MaterialTheme.colorScheme.primaryContainer
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val stroke = 12.dp.toPx()
                             // Gray background
@@ -2236,7 +2240,7 @@ fun StatisticsScreen(
                             )
                             // Mastery (68%)
                             drawArc(
-                                color = Primary,
+                                color = donutPrimary,
                                 startAngle = -90f,
                                 sweepAngle = 360f * 0.68f,
                                 useCenter = false,
@@ -2244,7 +2248,7 @@ fun StatisticsScreen(
                             )
                             // Learning (20%)
                             drawArc(
-                                color = PrimaryContainer,
+                                color = donutPrimaryContainer,
                                 startAngle = -90f + (360f * 0.68f),
                                 sweepAngle = 360f * 0.20f,
                                 useCenter = false,
@@ -2265,8 +2269,8 @@ fun StatisticsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        LegendItem(color = Primary, value = "612", label = "Dikuasai")
-                        LegendItem(color = PrimaryContainer, value = "180", label = "Belajar")
+                        LegendItem(color = MaterialTheme.colorScheme.primary, value = "612", label = "Dikuasai")
+                        LegendItem(color = MaterialTheme.colorScheme.primaryContainer, value = "180", label = "Belajar")
                         LegendItem(color = MaterialTheme.colorScheme.surfaceContainerHighest, value = "108", label = "Belum")
                     }
                 }
@@ -2303,10 +2307,10 @@ fun StatisticsScreen(
                                 for (rowIndex in 1..7) {
                                     val intensity = (0..4).random()
                                     val squareColor = when (intensity) {
-                                        4 -> OnPrimaryFixedVariant
-                                        3 -> Primary
-                                        2 -> PrimaryContainer
-                                        1 -> PrimaryFixed
+                                        4 -> MaterialTheme.colorScheme.primary
+                                        3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                        2 -> MaterialTheme.colorScheme.primaryContainer
+                                        1 -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                                         else -> MaterialTheme.colorScheme.surfaceContainerHigh
                                     }
                                     Box(
@@ -2332,13 +2336,13 @@ fun StatisticsScreen(
                         Spacer(modifier = Modifier.width(4.dp))
                         Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Box(modifier = Modifier.size(10.dp).background(PrimaryFixed))
+                        Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Box(modifier = Modifier.size(10.dp).background(PrimaryContainer))
+                        Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.primaryContainer))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Box(modifier = Modifier.size(10.dp).background(Primary))
+                        Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Box(modifier = Modifier.size(10.dp).background(OnPrimaryFixedVariant))
+                        Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = "Banyak", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -2482,10 +2486,10 @@ fun SettingsScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .background(PrimaryFixed)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
-                                Text(text = "Gratis", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = OnPrimaryFixedVariant)
+                                Text(text = "Gratis", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)

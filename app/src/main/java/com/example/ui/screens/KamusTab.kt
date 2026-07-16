@@ -21,13 +21,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.Word
 import com.example.ui.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KamusTab(
     viewModel: MainViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onWordClick: ((word: Word) -> Unit)? = null
 ) {
     val words by viewModel.allWords.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
@@ -222,7 +224,13 @@ fun KamusTab(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.selectWordForDetail(word) }
+                            .clickable { 
+                                if (onWordClick != null) {
+                                    onWordClick(word)
+                                } else {
+                                    viewModel.selectWordForDetail(word)
+                                }
+                            }
                             .background(Color.White)
                     ) {
                         Row(

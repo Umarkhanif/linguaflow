@@ -11,11 +11,12 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-@Database(entities = [Word::class, PracticeHistory::class, SpeechHistory::class], version = 2, exportSchema = false)
+@Database(entities = [Word::class, PracticeHistory::class, SpeechHistory::class, UserProgress::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun wordDao(): WordDao
     abstract fun practiceHistoryDao(): PracticeHistoryDao
     abstract fun speechHistoryDao(): SpeechHistoryDao
+    abstract fun userProgressDao(): UserProgressDao
 
     companion object {
         @Volatile
@@ -28,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "linguaflow_database"
                 )
-                .fallbackToDestructiveMigration()
+                .addMigrations(MIGRATION_2_3)
                 .addCallback(DatabaseCallback(scope))
                 .build()
                 INSTANCE = instance
@@ -46,8 +47,13 @@ abstract class AppDatabase : RoomDatabase() {
                 scope.launch(Dispatchers.IO) {
                     populateDatabase(database.wordDao(), database.practiceHistoryDao())
                     populateSpeechHistory(database.speechHistoryDao())
+                    populateUserProgress(database.userProgressDao())
                 }
             }
+        }
+
+        private suspend fun populateUserProgress(dao: UserProgressDao) {
+            dao.upsert(UserProgress(userId = "local"))
         }
 
         suspend fun populateDatabase(wordDao: WordDao, historyDao: PracticeHistoryDao) {

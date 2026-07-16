@@ -2,6 +2,13 @@ package com.example.ui
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.api.EvaluationResult
@@ -9,7 +16,13 @@ import com.example.api.GeminiClient
 import com.example.data.AppDatabase
 import com.example.data.PracticeHistory
 import com.example.data.SpeechHistory
+import com.example.data.UserProgress
 import com.example.data.Word
+import com.example.data.repository.PracticeRepository
+import com.example.data.repository.SpeechRepository
+import com.example.data.repository.UserProgressRepository
+import com.example.data.repository.WordRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,29 +35,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-enum class AppTheme {
-    LIGHT,
-    DARK,
-    SYSTEM
-}
-
-enum class AppScreen {
-    SPLASH,
-    ONBOARDING,
-    MAIN,
-    FLASHCARD,
-    QUIZ
-}
-
-enum class MainTab {
-    BELAJAR,
-    LATIHAN,
-    KAMUS,
-    PERINGKAT,
-    UCAPAN,
-    PROFIL
-}
+import javax.inject.Inject
 
 data class ChatMessage(
     val text: String,
@@ -59,22 +50,27 @@ data class SpeechExercise(
     val indexText: String = "3/10"
 )
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class MainViewModel @Inject constructor(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application, viewModelScope)
-    private val wordDao = db.wordDao()
-    private val practiceHistoryDao = db.practiceHistoryDao()
-    private val speechHistoryDao = db.speechHistoryDao()
+    private val wordRepository = WordRepository(db.wordDao())
+    private val practiceRepository = PracticeRepository(db.practiceHistoryDao())
+    private val speechRepository = SpeechRepository(db.speechHistoryDao())
+    private val userProgressRepository = UserProgressRepository(db.userProgressDao())
 
-    // ─── DB flows ───────────────────────────────────────────────────────────
-    val allWords: StateFlow<List<Word>> = wordDao.getAllWordsFlow()
+    // ─── DB flows (via repository layer) ───────────────────────────────────
+    val allWords: StateFlow<List<Word>> = wordRepository.getAllWords()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val histories: StateFlow<List<PracticeHistory>> = practiceHistoryDao.getAllHistoryFlow()
+    val histories: StateFlow<List<PracticeHistory>> = practiceRepository.getAllHistory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val speechHistory: StateFlow<List<SpeechHistory>> = speechHistoryDao.getAllHistory()
+    val speechHistory: StateFlow<List<SpeechHistory>> = speechRepository.getAllHistory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val userProgress: StateFlow<UserProgress?> = userProgressRepository.getProgress()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     // ─── App Navigation States ───────────────────────────────────────────────
     private val _currentScreen = MutableStateFlow(AppScreen.SPLASH)
@@ -196,6 +192,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _evaluationResult = MutableStateFlow<EvaluationResult?>(null)
     val evaluationResult = _evaluationResult.asStateFlow()
 
+    private val _recognizedText = MutableStateFlow("")
+    val recognizedText = _recognizedText.asStateFlow()
+
+    private val _speechAvailable = MutableStateFlow(true)
+    val speechAvailable = _speechAvailable.asStateFlow()
+
+    private val _speechError = MutableStateFlow<String?>(null)
+    val speechError = _speechError.asStateFlow()
+
+    private var speechRecognizer: SpeechRecognizer? = null
+
     private var recordingJob: Job? = null
     private var waveformJob: Job? = null
 
@@ -261,7 +268,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleBookmark(word: Word) {
         viewModelScope.launch(Dispatchers.IO) {
-            wordDao.updateBookmark(word.id, !word.bookmarked)
+            wordRepository.updateBookmark(word.id, !word.bookmarked)
             if (_selectedWordForDetail.value?.id == word.id) {
                 _selectedWordForDetail.value = word.copy(bookmarked = !word.bookmarked)
             }
@@ -270,7 +277,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun markAsLearned(word: Word, learned: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            wordDao.updateLearned(word.id, learned)
+            wordRepository.updateLearned(word.id, learned)
         }
     }
 
@@ -298,7 +305,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     score = 100,
                     category = "Kuis Kosakata"
                 )
-                practiceHistoryDao.insertHistory(ph)
+                practiceRepository.insertHistory(ph)
             }
             _currentScreen.value = AppScreen.MAIN
         }
@@ -372,7 +379,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     score = finalScore,
                     category = "Tata Bahasa"
                 )
-                practiceHistoryDao.insertHistory(ph)
+                practiceRepository.insertHistory(ph)
             }
             _currentScreen.value = AppScreen.MAIN
             _activeTab.value = MainTab.LATIHAN
@@ -400,18 +407,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // ─── Speech practice functions (from linguaflow2) ─────────────────────────
-    fun toggleRecording() {
+    fun toggleRecording(context: Context) {
         if (_isRecording.value) {
             stopRecording()
         } else {
-            startRecording()
+            startRecording(context)
         }
     }
 
-    private fun startRecording() {
+    fun setSpeechError(message: String) {
+        _speechError.value = message
+    }
+
+    private fun startRecording(context: Context) {
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            _speechError.value = "Izin mikrofon diperlukan untuk latihan ucapan."
+            return
+        }
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            _speechAvailable.value = false
+            _speechError.value = "Speech recognition tidak tersedia di perangkat/emulator ini."
+            return
+        }
+
+        _speechError.value = null
+        _recognizedText.value = ""
         _isRecording.value = true
         _hasRecorded.value = false
         _recordingDurationSeconds.value = 0
+
+        if (speechRecognizer == null) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+        }
+        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {
+                _speechError.value = "Gagal mengenali ucapan (kode $error)."
+                stopRecording()
+            }
+            override fun onResults(results: Bundle?) {
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                _recognizedText.value = matches?.firstOrNull()?.trim() ?: ""
+                stopRecording()
+            }
+            override fun onPartialResults(partialResults: Bundle?) {
+                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                matches?.firstOrNull()?.let { _recognizedText.value = it.trim() }
+            }
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ja-JP")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+        speechRecognizer?.startListening(intent)
 
         recordingJob = viewModelScope.launch {
             while (_isRecording.value) {
@@ -429,6 +487,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopRecording() {
+        speechRecognizer?.stopListening()
         _isRecording.value = false
         recordingJob?.cancel()
         waveformJob?.cancel()
@@ -444,18 +503,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun submitForEvaluation(context: Context, navigateToResult: () -> Unit) {
+        val transcript = _recognizedText.value.trim()
+        if (transcript.isEmpty()) {
+            _speechError.value = "Belum ada ucapan terdeteksi. Tekan mikrofon lalu ucapkan kalimatnya."
+            return
+        }
+
         val target = currentExercise.value
         _isEvaluating.value = true
         _evaluationResult.value = null
 
         viewModelScope.launch {
-            val spokenText = if (target.id == 1) {
-                "私は毎日日本語をべんきょうします"
-            } else {
-                target.text
-            }
-
-            val result = GeminiClient.evaluateSpeech(target.text, spokenText)
+            val result = GeminiClient.evaluateSpeech(target.text, transcript)
             _evaluationResult.value = result
             _isEvaluating.value = false
 
@@ -478,7 +537,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
 
             launch(Dispatchers.IO) {
-                speechHistoryDao.insertHistory(historyItem)
+                speechRepository.insertHistory(historyItem)
             }
 
             navigateToResult()
@@ -505,5 +564,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _profileBio.value = tempBio.value
         _learningTarget.value = tempTarget.value
         _languagesList.value = tempLanguages.value
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        speechRecognizer?.destroy()
+        speechRecognizer = null
     }
 }

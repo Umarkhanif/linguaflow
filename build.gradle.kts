@@ -5,14 +5,5 @@ plugins {
   alias(libs.plugins.google.devtools.ksp) apply false
   alias(libs.plugins.roborazzi) apply false
   alias(libs.plugins.secrets) apply false
-}
-
-buildscript {
-  repositories {
-    google()
-    mavenCentral()
-  }
-  dependencies {
-    classpath("com.google.dagger:hilt-android-gradle-plugin:2.60.1")
-  }
+  alias(libs.plugins.google.services) apply false
 }

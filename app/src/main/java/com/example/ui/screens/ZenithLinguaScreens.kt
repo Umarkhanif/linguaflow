@@ -1,13 +1,8 @@
 ﻿package com.example.ui.screens
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -372,15 +367,6 @@ fun SpeechPracticeScreen(
     val waveformBars by viewModel.waveformBars.collectAsStateWithLifecycle()
     val hasRecorded by viewModel.hasRecorded.collectAsStateWithLifecycle()
     val isEvaluating by viewModel.isEvaluating.collectAsStateWithLifecycle()
-    val speechError by viewModel.speechError.collectAsStateWithLifecycle()
-    val speechAvailable by viewModel.speechAvailable.collectAsStateWithLifecycle()
-
-    val recordPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) viewModel.toggleRecording(context)
-        else viewModel.setSpeechError("Izin mikrofon ditolak. Tidak bisa merekam.")
-    }
 
     val formattedTime = String.format(Locale.getDefault(), "00:%02d", durationSeconds)
 
@@ -525,15 +511,7 @@ fun SpeechPracticeScreen(
 
                 // Main circular mic button
                 IconButton(
-                    onClick = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-                            == PackageManager.PERMISSION_GRANTED
-                        ) {
-                            viewModel.toggleRecording(context)
-                        } else {
-                            recordPermission.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    },
+                    onClick = { viewModel.toggleRecording() },
                     modifier = Modifier
                         .size(80.dp)
                         .testTag("mic_button")
@@ -591,23 +569,13 @@ fun SpeechPracticeScreen(
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
-            speechError?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = it,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
             Spacer(modifier = Modifier.weight(1f))
 
             // Submit / Redo buttons
             Button(
                 onClick = { viewModel.submitForEvaluation(context, onNavigateToResult) },
-                enabled = (hasRecorded || durationSeconds > 0) && speechAvailable,
+                enabled = hasRecorded || durationSeconds > 0,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)

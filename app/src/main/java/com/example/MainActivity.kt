@@ -23,10 +23,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.AppScreen
 import com.example.ui.AppTheme
 import com.example.ui.MainTab
-import com.example.ui.AppScreen
 import com.example.ui.MainViewModel
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val viewModel: MainViewModel = hiltViewModel()
+            val viewModel: MainViewModel = viewModel()
             val themeState by viewModel.appTheme.collectAsState()
             val isDarkTheme = when (themeState) {
                 AppTheme.LIGHT -> false

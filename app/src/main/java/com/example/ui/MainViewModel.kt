@@ -206,31 +206,6 @@ class MainViewModel @Inject constructor(application: Application) : AndroidViewM
     private var recordingJob: Job? = null
     private var waveformJob: Job? = null
 
-    // ─── Profile states (from linguaflow2) ───────────────────────────────────
-    private val _profileName = MutableStateFlow("Bima Melayu")
-    val profileName = _profileName.asStateFlow()
-
-    private val _profileUsername = MutableStateFlow("@bimamelayu")
-    val profileUsername = _profileUsername.asStateFlow()
-
-    private val _profileEmail = MutableStateFlow("bima.melayu@example.com")
-    val profileEmail = _profileEmail.asStateFlow()
-
-    private val _profileBio = MutableStateFlow("")
-    val profileBio = _profileBio.asStateFlow()
-
-    private val _learningTarget = MutableStateFlow("Normal")
-    val learningTarget = _learningTarget.asStateFlow()
-
-    private val _languagesList = MutableStateFlow(listOf("Jepang", "Inggris"))
-    val languagesList = _languagesList.asStateFlow()
-
-    val tempName = MutableStateFlow("Bima Melayu")
-    val tempUsername = MutableStateFlow("@bimamelayu")
-    val tempBio = MutableStateFlow("")
-    val tempTarget = MutableStateFlow("Normal")
-    val tempLanguages = MutableStateFlow(listOf("Jepang", "Inggris"))
-
     // ─── Init ─────────────────────────────────────────────────────────────────
     init {
         viewModelScope.launch {
@@ -250,7 +225,6 @@ class MainViewModel @Inject constructor(application: Application) : AndroidViewM
 
     fun setUserName(name: String) {
         _userName.value = if (name.trim().isEmpty()) "Tamu" else name
-        _profileName.value = if (name.trim().isEmpty()) "Tamu" else name
     }
 
     fun setAppTheme(theme: AppTheme) {
@@ -547,23 +521,6 @@ class MainViewModel @Inject constructor(application: Application) : AndroidViewM
     fun nextExercise() {
         _currentExerciseIndex.value += 1
         clearRecording()
-    }
-
-    // ─── Profile functions (from linguaflow2) ────────────────────────────────
-    fun startEditingProfile() {
-        tempName.value = _profileName.value
-        tempUsername.value = _profileUsername.value
-        tempBio.value = _profileBio.value
-        tempTarget.value = _learningTarget.value
-        tempLanguages.value = _languagesList.value
-    }
-
-    fun saveProfile() {
-        _profileName.value = tempName.value
-        _profileUsername.value = tempUsername.value
-        _profileBio.value = tempBio.value
-        _learningTarget.value = tempTarget.value
-        _languagesList.value = tempLanguages.value
     }
 
     override fun onCleared() {
